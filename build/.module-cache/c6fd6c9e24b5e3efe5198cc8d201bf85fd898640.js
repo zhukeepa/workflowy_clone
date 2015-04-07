@@ -1,10 +1,6 @@
 // TODO: refactor. make path class? for getting and setting these values? 
 // status forms don't update 
-
 // set new focus
-//   - using debugger
-//   - how to access children properties
-
 // repeated code ??
 
 

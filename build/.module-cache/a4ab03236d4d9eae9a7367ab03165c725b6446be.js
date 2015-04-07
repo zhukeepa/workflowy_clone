@@ -1,11 +1,5 @@
-// TODO: refactor. make path class? for getting and setting these values? 
-// status forms don't update 
-
-// set new focus
-//   - using debugger
-//   - how to access children properties
-
-// repeated code ??
+// mouse clicks work
+// autofocus
 
 
 var I = Immutable; 
@@ -33,68 +27,27 @@ var todos = L([
   })
 ])
 
+// path function. takes in callback, and opt way of accessing child element
+// oneListOp 
 
-
-function insertAfterPath(xs, val, path) { 
-  if (path.size == 0) { 
-    throw new Error("Path must have path with positive length.")
-  }
-
-  var index = path.get(0); 
-  if (path.size == 1) { 
-    return xs.splice(index + 1, 0, val);
-  }
-  
-  var restOfPath = path.slice(1); 
-  var child = xs.get(index); 
-  child = child.set("children", insertAfterPath(child.get("children"), val, restOfPath)); 
-  return xs.splice(index, 1, child);
-}
-
-function replaceValAtPath(xs, val, path) { 
-  if (path.size == 0) { 
-    throw new Error("Path must have path with positive length.")
-  }
-
-  var index = path.get(0); 
-  if (path.size == 1) { 
-    return xs.splice(index, 1, val);
-  }
-  
-  var restOfPath = path.slice(1); 
-  var child = xs.get(index); 
-  child = child.set("children", replaceValAtPath(child.get("children"), val, restOfPath)); 
-  return xs.splice(index, 1, child);
-}
-
+// .get() 
 var EditorComponent = React.createClass({displayName: "EditorComponent",
   getInitialState: function() { 
     return { todos: this.props.todos };
   },
   updateAndInsertFromAbsolutePath: function(path, updatedVal, newVal) {
-    var newVal     = M({ text: newVal, children: L()});
-    var updatedVal = M({ text: updatedVal, children: L()});
-    var todos = insertAfterPath(this.state.todos, newVal, path);
-    todos = replaceValAtPath(todos, updatedVal, path);
+    var todos = insertTextAfterPath(this.state.todos, newVal, path);
+    todos = replaceTextAtPath(todos, updatedVal, path);
     this.setState({ todos: todos }); 
   }, 
-  setFocusFromAbsolutePath: function(path, list) { 
-    list = typeof list !== 'undefined' ? list : this.refs.topTodoList; 
-
-    if (path.size == 0) { 
-      throw new Error("Path must have path with positive length.")
+  setFocusFromAbsolutePath: function(path) { 
+    /*var cur = this.refs.topTodoList; 
+    for (var i = 0; i < path.size; ++i) { 
+      debugger; 
+      cur = cur.props.get("children").get(path[i]); 
     }
-
-    console.log(path.toString(), list.props.children);//, list);
-
-    var index = path.get(0); 
-    if (path.size == 1) { 
-      console.log(React.findDOMNode(list.props.children[index]).value);
-      return React.findDOMNode(list.props.children[index]).value; 
-    }
-    
-    var restOfPath = path.slice(1); 
-    this.setFocusFromAbsolutePath(restOfPath, list.children[index]);
+    debugger;
+    return React.findDOMNode(cur).value; */
   },
   keyPressHandler: function(path, e) { 
     switch (e.which) { 
@@ -168,14 +121,13 @@ var TodoItemComponent = React.createClass({displayName: "TodoItemComponent",
   } 
 });
 
-// design question -- do keypress handling down here, but call various functions from up top? 
-// that would involve a very obnoxious chain of functions to pass down though, wouldn't it? 
-// otherwise -- how to cleanly pass up data to top function? 
-
 var InputComponent = React.createClass({displayName: "InputComponent",
   mixins: [React.addons.LinkedStateMixin],
   getInitialState: function() { 
     return { text: this.props.initValue }; 
+  },
+  componentWillReceiveProps: function(props) {
+    this.setState({ text: props.initValue });
   },
   render: function() {
     return React.createElement("input", {className: this.props.className, 

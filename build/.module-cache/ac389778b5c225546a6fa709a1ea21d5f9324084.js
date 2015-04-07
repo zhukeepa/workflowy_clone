@@ -1,5 +1,6 @@
-// TODO: refactor. make path class? for getting and setting these values? 
-// status forms don't update 
+// TODO: refactor. 
+// make path class
+// status forms don't rerun getInitialState()
 
 // set new focus
 //   - using debugger
@@ -33,40 +34,10 @@ var todos = L([
   })
 ])
 
+// path function. takes in callback, and opt way of accessing child element
+// oneListOp 
 
-
-function insertAfterPath(xs, val, path) { 
-  if (path.size == 0) { 
-    throw new Error("Path must have path with positive length.")
-  }
-
-  var index = path.get(0); 
-  if (path.size == 1) { 
-    return xs.splice(index + 1, 0, val);
-  }
-  
-  var restOfPath = path.slice(1); 
-  var child = xs.get(index); 
-  child = child.set("children", insertAfterPath(child.get("children"), val, restOfPath)); 
-  return xs.splice(index, 1, child);
-}
-
-function replaceValAtPath(xs, val, path) { 
-  if (path.size == 0) { 
-    throw new Error("Path must have path with positive length.")
-  }
-
-  var index = path.get(0); 
-  if (path.size == 1) { 
-    return xs.splice(index, 1, val);
-  }
-  
-  var restOfPath = path.slice(1); 
-  var child = xs.get(index); 
-  child = child.set("children", replaceValAtPath(child.get("children"), val, restOfPath)); 
-  return xs.splice(index, 1, child);
-}
-
+// .get() 
 var EditorComponent = React.createClass({displayName: "EditorComponent",
   getInitialState: function() { 
     return { todos: this.props.todos };
@@ -85,16 +56,13 @@ var EditorComponent = React.createClass({displayName: "EditorComponent",
       throw new Error("Path must have path with positive length.")
     }
 
-    console.log(path.toString(), list.props.children);//, list);
-
     var index = path.get(0); 
     if (path.size == 1) { 
-      console.log(React.findDOMNode(list.props.children[index]).value);
-      return React.findDOMNode(list.props.children[index]).value; 
+      return React.findDOMNode(list.items.get(index)).value; 
     }
     
     var restOfPath = path.slice(1); 
-    this.setFocusFromAbsolutePath(restOfPath, list.children[index]);
+    this.setFocusFromAbsolutePath(restOfPath, list.items.get(index));
   },
   keyPressHandler: function(path, e) { 
     switch (e.which) { 
@@ -123,10 +91,12 @@ var TodoListComponent = React.createClass({displayName: "TodoListComponent",
       var path = this.props.path.push(i); 
       ret.push(React.createElement(TodoItemComponent, {text: t.get("text"), 
                                   path: path, 
+                                  ref: path.join('.'), 
                                   keyPressHandler: this.props.keyPressHandler.bind(null, path)}));
       if (t.get("children").size > 0) {
         ret.push(React.createElement(TodoListComponent, {items: t.get("children"), 
                                     path: path, 
+                                    ref: path.join('.'), 
                                     keyPressHandler: this.props.keyPressHandler}));
       }
     }
@@ -168,14 +138,13 @@ var TodoItemComponent = React.createClass({displayName: "TodoItemComponent",
   } 
 });
 
-// design question -- do keypress handling down here, but call various functions from up top? 
-// that would involve a very obnoxious chain of functions to pass down though, wouldn't it? 
-// otherwise -- how to cleanly pass up data to top function? 
-
 var InputComponent = React.createClass({displayName: "InputComponent",
   mixins: [React.addons.LinkedStateMixin],
   getInitialState: function() { 
     return { text: this.props.initValue }; 
+  },
+  componentWillReceiveProps: function(props) {
+    this.setState({ text: props.initValue });
   },
   render: function() {
     return React.createElement("input", {className: this.props.className, 

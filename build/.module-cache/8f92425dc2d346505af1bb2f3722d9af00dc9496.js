@@ -1,5 +1,6 @@
-// TODO: refactor. make path class? for getting and setting these values? 
-// status forms don't update 
+// TODO: refactor. 
+// make path class
+// status forms don't rerun getInitialState()
 
 // set new focus
 //   - using debugger
@@ -33,6 +34,7 @@ var todos = L([
   })
 ])
 
+// path function for making modifications to length 1 list, 
 
 
 function insertAfterPath(xs, val, path) { 

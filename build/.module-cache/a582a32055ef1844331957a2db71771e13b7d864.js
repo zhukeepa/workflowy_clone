@@ -1,13 +1,3 @@
-// TODO: refactor. make path class? for getting and setting these values? 
-// status forms don't update 
-
-// set new focus
-//   - using debugger
-//   - how to access children properties
-
-// repeated code ??
-
-
 var I = Immutable; 
 var L = I.List; 
 var M = I.Map; 
@@ -63,7 +53,7 @@ function replaceValAtPath(xs, val, path) {
   
   var restOfPath = path.slice(1); 
   var child = xs.get(index); 
-  child = child.set("children", replaceValAtPath(child.get("children"), val, restOfPath)); 
+  child = child.set("children", insertAfterPath(child.get("children"), val, restOfPath)); 
   return xs.splice(index, 1, child);
 }
 
@@ -78,40 +68,21 @@ var EditorComponent = React.createClass({displayName: "EditorComponent",
     todos = replaceValAtPath(todos, updatedVal, path);
     this.setState({ todos: todos }); 
   }, 
-  setFocusFromAbsolutePath: function(path, list) { 
-    list = typeof list !== 'undefined' ? list : this.refs.topTodoList; 
+  setFocusFromAbsolutePath : function(path) { 
 
-    if (path.size == 0) { 
-      throw new Error("Path must have path with positive length.")
-    }
-
-    console.log(path.toString(), list.props.children);//, list);
-
-    var index = path.get(0); 
-    if (path.size == 1) { 
-      console.log(React.findDOMNode(list.props.children[index]).value);
-      return React.findDOMNode(list.props.children[index]).value; 
-    }
-    
-    var restOfPath = path.slice(1); 
-    this.setFocusFromAbsolutePath(restOfPath, list.children[index]);
   },
   keyPressHandler: function(path, e) { 
+    console.log(e.target.val);
     switch (e.which) { 
       case 13: 
-        var form = e.target; 
-        var updatedVal = form.value.slice(0, form.selectionStart); 
-        var newVal = form.value.slice(form.selectionEnd, form.value.length)
-        this.updateAndInsertFromAbsolutePath(path, updatedVal, newVal); 
-        this.setFocusFromAbsolutePath(path); 
+        this.updateAndInsertFromAbsolutePath(path, "Poo", "Fart"); 
         break; 
     }
   },
   render: function () { 
     return React.createElement(TodoListComponent, {items: this.state.todos, 
                               path: L([]), 
-                              keyPressHandler: this.keyPressHandler, 
-                              ref: "topTodoList"})
+                              keyPressHandler: this.keyPressHandler})
   }
 })
 

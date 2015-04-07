@@ -1,4 +1,5 @@
-// TODO: refactor. make path class? for getting and setting these values? 
+// TODO: refactor. 
+// make path class
 // status forms don't update 
 
 // set new focus

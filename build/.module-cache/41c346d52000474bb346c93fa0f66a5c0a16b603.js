@@ -1,11 +1,5 @@
-// TODO: refactor. make path class? for getting and setting these values? 
-// status forms don't update 
-
-// set new focus
-//   - using debugger
-//   - how to access children properties
-
-// repeated code ??
+// mouse clicks work
+// autofocus
 
 
 var I = Immutable; 
@@ -33,84 +27,48 @@ var todos = L([
   })
 ])
 
+// path function. takes in callback, and opt way of accessing child element
+// oneListOp 
 
-
-function insertAfterPath(xs, val, path) { 
-  if (path.size == 0) { 
-    throw new Error("Path must have path with positive length.")
-  }
-
-  var index = path.get(0); 
-  if (path.size == 1) { 
-    return xs.splice(index + 1, 0, val);
-  }
-  
-  var restOfPath = path.slice(1); 
-  var child = xs.get(index); 
-  child = child.set("children", insertAfterPath(child.get("children"), val, restOfPath)); 
-  return xs.splice(index, 1, child);
-}
-
-function replaceValAtPath(xs, val, path) { 
-  if (path.size == 0) { 
-    throw new Error("Path must have path with positive length.")
-  }
-
-  var index = path.get(0); 
-  if (path.size == 1) { 
-    return xs.splice(index, 1, val);
-  }
-  
-  var restOfPath = path.slice(1); 
-  var child = xs.get(index); 
-  child = child.set("children", replaceValAtPath(child.get("children"), val, restOfPath)); 
-  return xs.splice(index, 1, child);
-}
-
+// .get() 
 var EditorComponent = React.createClass({displayName: "EditorComponent",
   getInitialState: function() { 
     return { todos: this.props.todos };
   },
-  updateAndInsertFromAbsolutePath: function(path, updatedVal, newVal) {
-    var newVal     = M({ text: newVal, children: L()});
-    var updatedVal = M({ text: updatedVal, children: L()});
-    var todos = insertAfterPath(this.state.todos, newVal, path);
-    todos = replaceValAtPath(todos, updatedVal, path);
-    this.setState({ todos: todos }); 
-  }, 
-  setFocusFromAbsolutePath: function(path, list) { 
-    list = typeof list !== 'undefined' ? list : this.refs.topTodoList; 
-
-    if (path.size == 0) { 
-      throw new Error("Path must have path with positive length.")
+  setFocusFromAbsolutePath: function(path) { 
+    var list = this.refs.topTodoList; 
+    for (var i = 0; i < path.size - 1; ++i) {
+      list = list.refs['list'+path.get(i)];
     }
-
-    console.log(path.toString(), list.props.children);//, list);
-
-    var index = path.get(0); 
-    if (path.size == 1) { 
-      console.log(React.findDOMNode(list.props.children[index]).value);
-      return React.findDOMNode(list.props.children[index]).value; 
-    }
-    
-    var restOfPath = path.slice(1); 
-    this.setFocusFromAbsolutePath(restOfPath, list.children[index]);
+    debugger;  
+    var item = list.refs['item'+path.get(i)]; 
+    debugger;
+    return React.findDOMNode(cur).value; 
   },
-  keyPressHandler: function(path, e) { 
+  keyDownHandler: function(path, e) { 
     switch (e.which) { 
-      case 13: 
+      case 13:
+        e.preventDefault(); 
         var form = e.target; 
         var updatedVal = form.value.slice(0, form.selectionStart); 
         var newVal = form.value.slice(form.selectionEnd, form.value.length)
-        this.updateAndInsertFromAbsolutePath(path, updatedVal, newVal); 
+        this.setState({todos: updateAndInsertAtPath(this.state.todos, path, updatedVal, newVal)});
         this.setFocusFromAbsolutePath(path); 
+        break; 
+
+      case 8: 
+        var form = e.target; 
+        if (form.selectionEnd > 0)
+          break; 
+        e.preventDefault();
+        this.setState({todos: mergeWithAboveAtPath(this.state.todos, path)});
         break; 
     }
   },
   render: function () { 
     return React.createElement(TodoListComponent, {items: this.state.todos, 
                               path: L([]), 
-                              keyPressHandler: this.keyPressHandler, 
+                              keyDownHandler: this.keyDownHandler, 
                               ref: "topTodoList"})
   }
 })
@@ -123,11 +81,13 @@ var TodoListComponent = React.createClass({displayName: "TodoListComponent",
       var path = this.props.path.push(i); 
       ret.push(React.createElement(TodoItemComponent, {text: t.get("text"), 
                                   path: path, 
-                                  keyPressHandler: this.props.keyPressHandler.bind(null, path)}));
+                                  ref: "item"+i.toString(), 
+                                  keyDownHandler: this.props.keyDownHandler.bind(null, path)}));
       if (t.get("children").size > 0) {
         ret.push(React.createElement(TodoListComponent, {items: t.get("children"), 
                                     path: path, 
-                                    keyPressHandler: this.props.keyPressHandler}));
+                                    ref: "list"+i.toString(), 
+                                    keyDownHandler: this.props.keyDownHandler}));
       }
     }
     return (React.createElement("ul", null, ret));
@@ -160,7 +120,7 @@ var TodoItemComponent = React.createClass({displayName: "TodoItemComponent",
         React.createElement("span", {className: spanClasses}, this.props.text), 
         React.createElement(InputComponent, {className: inputComponentClasses, 
                         initValue: this.props.text, 
-                        keyPressHandler: this.props.keyPressHandler, 
+                        keyDownHandler: this.props.keyDownHandler, 
                         onBlur: this._onBlur, 
                         ref: "input"})
       )
@@ -168,18 +128,17 @@ var TodoItemComponent = React.createClass({displayName: "TodoItemComponent",
   } 
 });
 
-// design question -- do keypress handling down here, but call various functions from up top? 
-// that would involve a very obnoxious chain of functions to pass down though, wouldn't it? 
-// otherwise -- how to cleanly pass up data to top function? 
-
 var InputComponent = React.createClass({displayName: "InputComponent",
   mixins: [React.addons.LinkedStateMixin],
   getInitialState: function() { 
     return { text: this.props.initValue }; 
   },
+  componentWillReceiveProps: function(props) {
+    this.setState({ text: props.initValue });
+  },
   render: function() {
     return React.createElement("input", {className: this.props.className, 
-                  onKeyPress: this.props.keyPressHandler, 
+                  onKeyDown: this.props.keyDownHandler, 
                   valueLink: this.linkState('text'), 
                   onBlur: this.props.onBlur});
   }

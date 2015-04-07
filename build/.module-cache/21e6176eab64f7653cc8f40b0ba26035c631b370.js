@@ -2,8 +2,7 @@
 // status forms don't update 
 
 // set new focus
-//   - using debugger
-//   - how to access children properties
+//
 
 // repeated code ??
 

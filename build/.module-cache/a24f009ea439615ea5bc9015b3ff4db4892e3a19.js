@@ -1,10 +1,6 @@
 // TODO: refactor. make path class? for getting and setting these values? 
 // status forms don't update 
-
 // set new focus
-//   - using debugger
-//   - how to access children properties
-
 // repeated code ??
 
 
@@ -80,17 +76,14 @@ var EditorComponent = React.createClass({displayName: "EditorComponent",
   }, 
   setFocusFromAbsolutePath: function(path, list) { 
     list = typeof list !== 'undefined' ? list : this.refs.topTodoList; 
-
     if (path.size == 0) { 
       throw new Error("Path must have path with positive length.")
     }
 
-    console.log(path.toString(), list.props.children);//, list);
-
     var index = path.get(0); 
     if (path.size == 1) { 
-      console.log(React.findDOMNode(list.props.children[index]).value);
-      return React.findDOMNode(list.props.children[index]).value; 
+      console.log(React.findDOMNode(list.children[index]).value);
+      return React.findDOMNode(list.children[index]).value; 
     }
     
     var restOfPath = path.slice(1); 
@@ -103,7 +96,6 @@ var EditorComponent = React.createClass({displayName: "EditorComponent",
         var updatedVal = form.value.slice(0, form.selectionStart); 
         var newVal = form.value.slice(form.selectionEnd, form.value.length)
         this.updateAndInsertFromAbsolutePath(path, updatedVal, newVal); 
-        this.setFocusFromAbsolutePath(path); 
         break; 
     }
   },
