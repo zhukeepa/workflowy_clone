@@ -1,5 +1,32 @@
-// mouse clicks work
+function setCursor(node,pos){
+
+    node = (typeof node == "string" || node instanceof String) ? document.getElementById(node) : node;
+
+    if(!node){
+        return false;
+    }else if(node.createTextRange){
+        var textRange = node.createTextRange();
+        textRange.collapse(true);
+        textRange.moveEnd(pos);
+        textRange.moveStart(pos);
+        textRange.select();
+        return true;
+    }else if(node.setSelectionRange){
+        node.setSelectionRange(pos,pos);
+        return true;
+    }
+
+    return false;
+}
+
+// mouse clicks
+// css prettificaiton
 // autofocus
+// make the mouse array jump to exactly the right position 
+// how does React know to sync the form when you press enter?
+// learn inheritance, and make classes for everything
+// make the backspace work when you're empty, and first child
+// think about how oneDown should really work
 
 
 var I = Immutable; 
@@ -15,7 +42,11 @@ var todos = L([
         children: L([
           M({
             text: "Murdr!", 
-            children: [] 
+            children: L([]) 
+          }), 
+          M({
+            text: "Death!", 
+            children: L([]) 
           })
         ])
       })
@@ -23,46 +54,139 @@ var todos = L([
   }), 
   M({
     text: "Buy eggse", 
-    children: M([])
+    children: L([])
   })
 ])
 
 // path function. takes in callback, and opt way of accessing child element
 // oneListOp 
-
-// .get() 
 var EditorComponent = React.createClass({
   getInitialState: function() { 
     return { todos: this.props.todos };
   },
-  setFocusFromAbsolutePath: function(path) { 
+  setFocusFromPath: function(path, jumpto) { 
     var list = this.refs.topTodoList; 
     for (var i = 0; i < path.size - 1; ++i) {
       list = list.refs['list'+path.get(i)];
     }
     var item = list.refs['item'+path.get(i)]; 
-    console.log(React.findDOMNode(item));
-    item.setFocus();
+    item.setFocus(jumpto);
   },
   keyDownHandler: function(path, e) { 
     switch (e.which) { 
+      // enter key
       case 13:
         e.preventDefault(); 
         var form = e.target; 
         var updatedVal = form.value.slice(0, form.selectionStart); 
         var newVal = form.value.slice(form.selectionEnd, form.value.length)
-        this.setState({todos: updateAndInsertAtPath(this.state.todos, path, updatedVal, newVal)}, function () { 
-          var newPath = path.splice(-1, 1, path.get(path.size-1)+1); //increase last term by 1
-          this.setFocusFromAbsolutePath(newPath); 
+
+        var tmp = updateAndInsertAtPath(this.state.todos, path, updatedVal, newVal); 
+        var newTodos = tmp[0]; 
+        var newPath  = tmp[1]; 
+        this.setState({todos: newTodos}, function () { 
+          this.setFocusFromPath(newPath);
         });
         break; 
 
+      // backspace key
       case 8: 
         var form = e.target; 
         if (form.selectionEnd > 0)
           break; 
+
         e.preventDefault();
-        this.setState({todos: mergeWithAboveAtPath(this.state.todos, path)});
+
+        var tmp = mergeWithAboveAtPath(this.state.todos, path, form.value); 
+        var newTodos = tmp[0]; 
+        var newPath  = tmp[1]; 
+        this.setState({todos: newTodos}, function () { 
+          this.setFocusFromPath(newPath);
+        });
+        break; 
+
+      // tab
+      case 9:
+        e.preventDefault(); 
+        if (!e.shiftKey) {
+          var form = e.target; 
+          var tmp = addIndentAtPath(this.state.todos, path, form.value); 
+          var newTodos = tmp[0]; 
+          var newPath  = tmp[1]; 
+
+          this.setState({todos: newTodos}, function () { 
+            this.setFocusFromPath(newPath);
+          });
+        }
+        else {
+          var form = e.target; 
+          var tmp = removeIndentAtPath(this.state.todos, path, form.value); 
+          var newTodos = tmp[0]; 
+          var newPath  = tmp[1]; 
+
+          this.setState({todos: newTodos}, function () { 
+            this.setFocusFromPath(newPath);
+          });
+        }
+        break; 
+
+      // left key
+      case 37: 
+        var form = e.target; 
+        if (form.selectionEnd > 0)
+          break; 
+
+        e.preventDefault();
+
+        var newTodos = replaceTextAtPath(this.state.todos, path, form.value)[0]; 
+        this.setState({todos: newTodos}, function () { 
+          var pathAbove = oneUp(path, newTodos); 
+          if (pathAbove != path)
+            this.setFocusFromPath(pathAbove, -1); 
+        });
+        break; 
+
+      // up key
+      case 38: 
+        e.preventDefault();
+        var form = e.target; 
+        var newTodos = replaceTextAtPath(this.state.todos, path, form.value)[0]; 
+        this.setState({todos: newTodos}, function () { 
+          this.setFocusFromPath(oneUp(path, newTodos), 0); 
+        });
+        break; 
+
+      // right key
+      case 39: 
+        var form = e.target; 
+        if (form.selectionEnd < form.value.length)
+          break; 
+
+        e.preventDefault();
+
+        var newTodos = replaceTextAtPath(this.state.todos, path, form.value)[0]; 
+        this.setState({todos: newTodos}, function () { 
+          var pathBelow = oneDown(path, newTodos); 
+          if (pathBelow != path)
+            this.setFocusFromPath(pathBelow, 0); 
+          else
+            this.setFocusFromPath(pathBelow, -1); 
+        });
+        break; 
+
+      // down key 
+      case 40: 
+        e.preventDefault();
+        var form = e.target; 
+        var newTodos = replaceTextAtPath(this.state.todos, path, form.value)[0]; 
+        this.setState({todos: newTodos}, function () { 
+          var pathBelow = oneDown(path, newTodos); 
+          if (pathBelow != path)
+            this.setFocusFromPath(pathBelow, 0); 
+          else {
+            this.setFocusFromPath(pathBelow, -1); 
+          }
+        });
         break; 
     }
   },
@@ -99,9 +223,17 @@ var TodoItemComponent = React.createClass({
   getInitialState: function() { 
     return { focus: false }
   }, 
-  setFocus: function() { 
+  setFocus: function(jumpto) { 
     this.setState({ focus: true }, function() {
-      this.refs.input.getDOMNode().focus();
+      var node = this.refs.input.getDOMNode();
+      node.focus();
+
+      if (typeof jumpto == 'number') { 
+        if (jumpto == -1) jumpto = node.value.length;
+        setCursor(node, jumpto); 
+        console.log("selectionStart: ", node.selectionEnd);
+        console.log("jumpto: ", jumpto);
+      }
     }); 
   },
   setBlur: function() { 
