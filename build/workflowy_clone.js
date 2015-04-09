@@ -11,7 +11,7 @@ function setCursor(node,pos){
         textRange.moveStart(pos);
         textRange.select();
         return true;
-    }else if(node.setSelectionRange){
+    } else if(node.setSelectionRange){
         node.setSelectionRange(pos,pos);
         return true;
     }
@@ -19,14 +19,12 @@ function setCursor(node,pos){
     return false;
 }
 
-// mouse clicks
 // css prettificaiton
-// autofocus
-// make the mouse array jump to exactly the right position 
-// how does React know to sync the form when you press enter?
+// make the mouse click jump to exactly the right position 
+// be more consistent about when you update the form entries on keypress
 // learn inheritance, and make classes for everything
-// make the backspace work when you're empty, and first child
-// think about how oneDown should really work
+// oneDown doesn't work properly
+// implement child logic
 
 
 var I = Immutable; 
@@ -73,35 +71,36 @@ var EditorComponent = React.createClass({displayName: "EditorComponent",
     item.setFocus(jumpto);
   },
   keyDownHandler: function(path, e) { 
+    var form = e.target; 
+    var text = form.value; 
     switch (e.which) { 
       // enter key
       case 13:
         e.preventDefault(); 
-        var form = e.target; 
-        var updatedVal = form.value.slice(0, form.selectionStart); 
-        var newVal = form.value.slice(form.selectionEnd, form.value.length)
+        var updatedVal = text.slice(0, form.selectionStart); 
+        var newVal = text.slice(form.selectionEnd, text.length)
 
         var tmp = updateAndInsertAtPath(this.state.todos, path, updatedVal, newVal); 
         var newTodos = tmp[0]; 
         var newPath  = tmp[1]; 
         this.setState({todos: newTodos}, function () { 
-          this.setFocusFromPath(newPath);
+          this.setFocusFromPath(newPath, 0);
         });
         break; 
 
       // backspace key
       case 8: 
-        var form = e.target; 
         if (form.selectionEnd > 0)
           break; 
 
         e.preventDefault();
 
-        var tmp = mergeWithAboveAtPath(this.state.todos, path, form.value); 
+        var tmp = mergeWithAboveAtPath(this.state.todos, path, text); 
         var newTodos = tmp[0]; 
         var newPath  = tmp[1]; 
         this.setState({todos: newTodos}, function () { 
-          this.setFocusFromPath(newPath);
+          if (newPath != path)
+            this.setFocusFromPath(newPath, -text.length - 1);
         });
         break; 
 
@@ -109,18 +108,16 @@ var EditorComponent = React.createClass({displayName: "EditorComponent",
       case 9:
         e.preventDefault(); 
         if (!e.shiftKey) {
-          var form = e.target; 
-          var tmp = addIndentAtPath(this.state.todos, path, form.value); 
+          var tmp = addIndentAtPath(this.state.todos, path, text); 
           var newTodos = tmp[0]; 
           var newPath  = tmp[1]; 
 
           this.setState({todos: newTodos}, function () { 
-            this.setFocusFromPath(newPath);
+            this.setFocusFromPath(newPath, form.selectionEnd);
           });
         }
         else {
-          var form = e.target; 
-          var tmp = removeIndentAtPath(this.state.todos, path, form.value); 
+          var tmp = removeIndentAtPath(this.state.todos, path, text); 
           var newTodos = tmp[0]; 
           var newPath  = tmp[1]; 
 
@@ -132,13 +129,12 @@ var EditorComponent = React.createClass({displayName: "EditorComponent",
 
       // left key
       case 37: 
-        var form = e.target; 
         if (form.selectionEnd > 0)
           break; 
 
         e.preventDefault();
 
-        var newTodos = replaceTextAtPath(this.state.todos, path, form.value)[0]; 
+        var newTodos = replaceTextAtPath(this.state.todos, path, text)[0]; 
         this.setState({todos: newTodos}, function () { 
           var pathAbove = oneUp(path, newTodos); 
           if (pathAbove != path)
@@ -149,8 +145,7 @@ var EditorComponent = React.createClass({displayName: "EditorComponent",
       // up key
       case 38: 
         e.preventDefault();
-        var form = e.target; 
-        var newTodos = replaceTextAtPath(this.state.todos, path, form.value)[0]; 
+        var newTodos = replaceTextAtPath(this.state.todos, path, text)[0]; 
         this.setState({todos: newTodos}, function () { 
           this.setFocusFromPath(oneUp(path, newTodos), 0); 
         });
@@ -158,13 +153,12 @@ var EditorComponent = React.createClass({displayName: "EditorComponent",
 
       // right key
       case 39: 
-        var form = e.target; 
-        if (form.selectionEnd < form.value.length)
+        if (form.selectionEnd < text.length)
           break; 
 
         e.preventDefault();
 
-        var newTodos = replaceTextAtPath(this.state.todos, path, form.value)[0]; 
+        var newTodos = replaceTextAtPath(this.state.todos, path, text)[0]; 
         this.setState({todos: newTodos}, function () { 
           var pathBelow = oneDown(path, newTodos); 
           if (pathBelow != path)
@@ -177,8 +171,7 @@ var EditorComponent = React.createClass({displayName: "EditorComponent",
       // down key 
       case 40: 
         e.preventDefault();
-        var form = e.target; 
-        var newTodos = replaceTextAtPath(this.state.todos, path, form.value)[0]; 
+        var newTodos = replaceTextAtPath(this.state.todos, path, text)[0]; 
         this.setState({todos: newTodos}, function () { 
           var pathBelow = oneDown(path, newTodos); 
           if (pathBelow != path)
@@ -229,7 +222,7 @@ var TodoItemComponent = React.createClass({displayName: "TodoItemComponent",
       node.focus();
 
       if (typeof jumpto == 'number') { 
-        if (jumpto == -1) jumpto = node.value.length;
+        if (jumpto < 0) jumpto += node.value.length + 1;
         setCursor(node, jumpto); 
         console.log("selectionStart: ", node.selectionEnd);
         console.log("jumpto: ", jumpto);
@@ -245,7 +238,8 @@ var TodoItemComponent = React.createClass({displayName: "TodoItemComponent",
       'hide': this.state.focus
     });
     var inputComponentClasses = cx({
-      'hide': !this.state.focus
+      'hide': !this.state.focus, 
+      'itemform': true
     });
 
     return (

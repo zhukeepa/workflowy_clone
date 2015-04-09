@@ -2,6 +2,9 @@ var I = Immutable;
 var L = I.List; 
 var M = I.Map; 
 
+function ItemList () {} 
+ItemList.prototype = new L;
+
 // undo returning arrays later, maybe?
 // type Index = Int
 // data T a = Empty | Node a (T a)
@@ -84,10 +87,15 @@ function mergeWithAboveAtPath(xs, path, text) {
 
       if (i == 0) return [l, L([i])]; 
 
-      var aboveText = l.get(i-1).get("text"); 
-      var aboveChildren = l.get(i-1).get("children"); 
-      if (aboveChildren.size > 0)
-        return [l, L([i])]; 
+      var aboveNode = l.get(i-1);
+      var aboveText = aboveNode.get("text"); 
+      var aboveChildren = aboveNode.get("children"); 
+      if (aboveChildren.size > 0) {
+        if (l.get(i).get("text") != "")
+          return [l, L([i])]; 
+        else
+          return [l.splice(i-1, 2, aboveNode), L([i-1]).concat(getPathOfLastChild(aboveNode))];
+      }
 
       var newNode = M({ text: aboveText + text, children: children });
       return [l.splice(i-1, 2, newNode), L([i-1])]; 
@@ -104,7 +112,7 @@ function mergeWithAboveAtPath(xs, path, text) {
       }
 
       if (text != "")
-        return [l, p]; 
+        return replaceTextAtPath(l, p, text); 
 
       var newNode = M({ text: parent.get("text"), children: parent.get("children").splice(0,1) });
       return [l.splice(pInd, 1, newNode), L([pInd])];
