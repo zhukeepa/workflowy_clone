@@ -19,40 +19,64 @@ function setCursor(node,pos){
     return false;
 }
 
-// css prettificaiton
-// make the mouse click jump to exactly the right position 
-// be more consistent about when you update the form entries on keypress
-// learn inheritance, and make classes for everything
-// oneDown doesn't work properly
-// implement child logic
-
-
 var I = Immutable; 
 var L = I.List; 
 var M = I.Map; 
 
 var todos = L([
   M({ 
-    text: "Buy milk", 
+    text: "Enter", 
     children: L([
       M({ 
-        text: "Kill the chickens", 
+        text: "Click between the arrows --><-- and press enter!",
+        children: L([])
+      })
+    ])
+  }), 
+  M({ 
+    text: "Backspace", 
+    children: L([
+      M({ 
+        text: "Hello ", 
+        children: L([])
+      }), 
+      M({ 
+        text: "world! Place your cursor at the start of this bullet and press backspace!", 
+        children: L([])
+      }), 
+      M({ 
+        text: "Click on the bullet point below and press backspace!", 
         children: L([
           M({
-            text: "Murdr!", 
-            children: L([]) 
-          }), 
+            text: "", 
+            children: L([])
+          })
+        ])
+      }), 
+    ])
+  }),
+
+  M({ 
+    text: "Tab", 
+    children: L([
+      M({ 
+        text: "Click here and press shift+tab!", 
+        children: L([])
+      }), 
+      M({ 
+        text: "Hi!", 
+        children: L([])
+      }),
+      M({ 
+        text: "Click here and press tab!", 
+        children: L([
           M({
-            text: "Death!", 
-            children: L([]) 
+            text: "Then click here and press shift+tab!", 
+            children: L([])
           })
         ])
       })
     ])
-  }), 
-  M({
-    text: "Buy eggse", 
-    children: L([])
   })
 ])
 
